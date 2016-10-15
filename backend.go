@@ -11,7 +11,9 @@ type Backend struct {
 }
 
 func New() *Backend {
-	return &Backend{}
+	return &Backend{
+		childs: make(map[string][]backend.Backend),
+	}
 }
 
 func (be *Backend) Use(ref string, child backend.Backend) {
