@@ -13,6 +13,21 @@ type user struct {
 	username, password string
 }
 
+func (u *user) ensureLoggedIn(reference string, i int) error {
+	if u.childs[reference][i] != nil {
+		return nil
+	}
+
+	be := u.be.childs[reference][i]
+
+	if child, err := be.Login(u.username, u.password); err != nil {
+		return err
+	} else {
+		u.childs[reference][i] = child
+		return nil
+	}
+}
+
 func (u *user) Username() string {
 	return u.username
 }
@@ -20,9 +35,9 @@ func (u *user) Username() string {
 func (u *user) ListMailboxes(subscribed bool) ([]backend.Mailbox, error) {
 	var mailboxes []backend.Mailbox
 	for ref, childs := range u.childs {
-		for _, child := range childs {
-			if child == nil {
-				continue
+		for i, child := range childs {
+			if err := u.ensureLoggedIn(ref, i); err != nil {
+				return nil, err
 			}
 
 			childMailboxes, err := child.ListMailboxes(subscribed)
@@ -49,9 +64,9 @@ func (u *user) GetMailbox(name string) (backend.Mailbox, error) {
 		}
 		name := strings.TrimPrefix(name, ref)
 
-		for _, child := range childs {
-			if child == nil {
-				continue
+		for i, child := range childs {
+			if err := u.ensureLoggedIn(ref, i); err != nil {
+				return nil, err
 			}
 
 			if mailbox, _ := child.GetMailbox(name); mailbox != nil {
@@ -66,14 +81,19 @@ func (u *user) GetMailbox(name string) (backend.Mailbox, error) {
 func (u *user) CreateMailbox(name string) error {
 	child := u.childs[""][0]
 	for ref, childs := range u.childs {
-		if len(childs) == 0 || childs[0] == nil {
+		if len(childs) == 0 {
 			continue
 		}
 
 		if ref != "" && strings.HasPrefix(name, ref) {
+			if err := u.ensureLoggedIn(ref, 0); err != nil {
+				return nil
+			}
+
 			child = childs[0]
+			name = strings.TrimPrefix(name, ref)
+			break
 		}
-		name = strings.TrimPrefix(name, ref)
 	}
 
 	return child.CreateMailbox(name)
