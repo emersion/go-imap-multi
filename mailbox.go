@@ -26,7 +26,7 @@ func (m *mailbox) Info() (*imap.MailboxInfo, error) {
 	return info, nil
 }
 
-func (m *mailbox) Status(items []string) (*imap.MailboxStatus, error) {
+func (m *mailbox) Status(items []imap.StatusItem) (*imap.MailboxStatus, error) {
 	status, err := m.Mailbox.Status(items)
 	if err != nil {
 		return nil, err
